@@ -1,8 +1,10 @@
 from webs import keep_alive
 import discord
 import os
-from jarvis import jarvis
-
+import covid19_data
+#from jarvis import jarvis
+from PyDictionary import PyDictionary
+dictionary=PyDictionary()
 import time
 import discord.ext
 from discord.utils import get
@@ -16,8 +18,20 @@ intents.members = True
 
 async def buffersender(ctx,arr,delim):
   buffer=""
+  i=0
   for item in arr:
-    buffer=buffer+str(item)+delim
+    if delim != "nl":
+      if arr.index(item) != len(arr):
+       buffer=buffer+str(item)+delim
+      else:
+        buffer=buffer+str(item)
+
+    else:
+      if arr.index(item) != len(arr):
+        buffer=buffer+str(i)+". "+str(item)
+      else:
+        buffer=buffer+str(item)
+
   await ctx.send(buffer)
 
 async def chopper(string,ctx):
@@ -45,7 +59,13 @@ global help
 help=True
 global debug
 debug=False
+global giflist
+giflist=[""]
+global weplist
+weplist=[("repulsors"," "),("missles","https://media.discordapp.net/attachments/724043385966559326/805165191590445077/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo.gif"),("sidewinders","https://cdn.discordapp.com/attachments/724043385966559326/805172033057980416/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo_1.gif")]
 
+global wepnum
+wepnum=2
 
 
 
@@ -111,11 +131,50 @@ async def on_ready():
      print("Booted Systems")
     
 
-
-       
-
 @bot.command()
-async def kill(ctx,member:discord.Member):
+async def covid(ctx):
+  from covid19_data import JHU
+  
+  #recovered = ('{:, }'.format(JHU.Total.recovered)) 
+  #deaths = ('{:, }'.format(JHU.Total.deaths)) 
+  #print(deaths)
+  #print("The number of COVID-19 deaths in California: " + str())
+  await ctx.send("The number of COVID-19 recoveries worldwide: " +str( JHU.Total.recovered))
+  await ctx.send("The number of worldwide COVID-19 deaths: " + str(JHU.Total.deaths))
+
+ 
+  #print(latest)
+  #await ctx.send(latest)
+       
+@bot.command()
+async def define(ctx,text):
+  buffer=[]
+  word=dictionary.meaning(text)
+  #print(word)
+  #print("G")
+ # print(word.items())
+  for item in word.items():
+    await ctx.send(item)
+  
+ 
+  #await ctx.send(keys)
+  #await buffersender(ctx,buffer,".\n")
+@bot.command()
+async def wepswitch(ctx):
+  global weplist
+  global wepnum
+  wepnames=[]
+  
+  for i in weplist:
+   wepnames.append(i[0])
+  
+  await buffersender(ctx,wepnames,", ")
+ 
+  await ctx.send("Which weapon # do you want")
+  wepnum=await bot.wait_for("message",check=check)
+  await ctx.send(weplist[wepnum]+" selected")
+@bot.command()
+async def fireat(ctx,member:discord.Member):
  
       
       
@@ -123,20 +182,24 @@ async def kill(ctx,member:discord.Member):
      
           import asyncio
           
-      
+          global weplist
+          global wepnum
+          if weapons:
 
         
-          msg = await ctx.send("Gun systems activating: ")
-          await asyncio.sleep(0.1)
-          await msg.edit(content='Gun systems activating: ⬜')
-          await asyncio.sleep(0.1)
-          await msg.edit(content='Gun systems activating: ⬜⬜')
-          await asyncio.sleep(0.1)
-          await msg.edit(content='Gun systems activating: ⬜⬜⬜')
-          await asyncio.sleep(0.1)
-          await ctx.send("_Firing {0} at  {1}_".format(wepchoice,member.name))
-          await ctx.send("https://tenor.com/view/iron-man-mark50gif-beam-iron-man-iron-man-suit-avengers-gif-17917988")
-    
+            msg = await ctx.send("Systems activating: ")
+            await asyncio.sleep(0.1)
+            await msg.edit(content=' Systems activating: ⬜')
+            await asyncio.sleep(0.1)
+            await msg.edit(content=' Systems activating: ⬜⬜')
+            await asyncio.sleep(0.1)
+            await msg.edit(content=' Systems activating: ⬜⬜⬜')
+            await asyncio.sleep(0.1)
+            await ctx.send("_Firing {0} at  {1}_".format(weplist[wepnum][0],member.name))
+            await ctx.send(weplist[wepnum][1])
+          else:
+           await ctx.send("Safety is On")
+        
       
 @bot.command()
 async def detonate(ctx):
