@@ -54,7 +54,7 @@ def dym(text,commands):
 
 async def performance(channel,start,finish):
   await channel.send(f"Command excecuted in {finish - start} seconds")
-bot = commands.Bot(command_prefix='.',intents=intents)  
+bot = commands.Bot(command_prefix=';',intents=intents)  
 
 
 global weapons 
@@ -67,7 +67,7 @@ debug=False
 global giflist
 giflist=[""]
 global weplist
-weplist=[("repulsors","https://cdn.discordapp.com/attachments/724043385966559326/805207126749478942/ezgif.com-gif-maker.gif"),("missles","https://media.discordapp.net/attachments/724043385966559326/805165191590445077/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo.gif"),("sidewinders","https://cdn.discordapp.com/attachments/724043385966559326/805172033057980416/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo_1.gif")]
+weplist=[("repulsors","https://cdn.discordapp.com/attachments/724043385966559326/805207126749478942/ezgif.com-gif-maker.gif"),("missles","https://media.discordapp.net/attachments/724043385966559326/805165191590445077/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo.gif"),("sidewinders","https://cdn.discordapp.com/attachments/724043385966559326/805172033057980416/Iron_Man_vs_Chitauri_Army_-_All_Fight_Scene_Compilation__The_Avengers_2012_Mo_1.gif"),("lasers","https://cdn.discordapp.com/attachments/724043385966559326/805527223469604944/Every_Iron_Man_RED_LASER_ATTACK__Iron_Man_2_Garden_Fight.gif")]
 #keeps track of index
 global wepnum
 wepnum=0
@@ -354,7 +354,11 @@ async def fireat(ctx,member:discord.Member):
           else:
            await ctx.send("Safety is On")
         
-      
+@bot.command()
+async def changepref(ctx,*,pref):
+  
+  bot.command_prefix=pref
+  await ctx.send("Prefix is "+bot.command_prefix)     
 @bot.command()
 async def detonate(ctx):
    for channel in ctx.guild.channels:
@@ -365,8 +369,46 @@ async def weptoggle(ctx):
   
   await ctx.send(switch("weapons"))
  
+@bot.command()
+async def whois(ctx,args):
+     mutualservers=0
+     buffer=" "
+     if "@" in args.strip(): 
+        #await ctx.send("GOING HERE")
+        memid=int(args.replace("<@!"," ").replace(">"," "))
+        user = await bot.fetch_user(memid)
+     else:   
+    
+      user = await bot.fetch_user(int(args))
+      
+     embed=discord.Embed(title="Result",color=discord.Color.blue())
+     embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/{0.id}/{0.avatar}.png?size=1024".format(user))
+     embed.add_field(name="Name", value=str(user), inline=False)
+     embed.add_field(name="Bot", value=user.bot, inline=False)
+     embed.add_field(name="Created At ", value=user.created_at,  inline=False)
+     for guild in bot.guilds:
+                   if user in guild.members:
+                     mutualservers+=1
+                     buffer+= guild.name + "   "
+     embed.add_field(name="# Mutual Servers",value=mutualservers)
+     if buffer==" ":
+       buffer="None"
+     embed.add_field(name="Mutual Servers",value=buffer)
 
-@bot.command()   #now this isn't bad
+                     
+                      
+     await ctx.send(embed=embed)
+       
+@whois.error
+async def whois_error(self,ctx, error):
+          #print("\nsalve\n")
+          if "Unknown User" in str(error):
+              
+              await ctx.send('No such user')
+          else:
+              
+              raise error
+@bot.command()   
 async def kick(ctx, member: discord.Member):
    
         await member.kick(reason=None)
@@ -422,7 +464,7 @@ async def on_message(message):
           
             await bot.process_commands(message)
        else:
-        if(userid==int(os.environ.get("userx")) and message.content==".suit"):
+        if(userid==int(os.environ.get("userx")) and message.content==bot.command_prefix+"suit"):
           insuit=True
           await message.channel.send("Welcome back, sir")
           
