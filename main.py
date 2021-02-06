@@ -603,7 +603,17 @@ async def pfpsearch(ctx,args):
      
     
 
-     
+@bot.command()
+async def hackban(ctx,*,args):
+  argsplit=args.split(" ")
+  for i in argsplit:
+     member=await bot.fetch_user(int(i))
+             
+            
+            
+     await ctx.guild.ban(member,reason="ban",delete_message_days=0)
+     await ctx.send("Hack Banned "+str(member))
+        
     
 @bot.command()   
 async def kick(ctx, member: discord.Member):
