@@ -12,11 +12,11 @@ import discord.ext
 from discord.utils import get
 from discord.ext import commands, tasks
 from discord.ext.commands import has_permissions, CheckFailure, check
-
+import asyncio
 
 intents = discord.Intents.default()
 intents.members = True
-
+bot = commands.Bot(command_prefix=';',intents=intents)  
 
 async def buffersender(ctx,arr,delim):
   buffer=""
@@ -34,9 +34,33 @@ async def buffersender(ctx,arr,delim):
         buffer=buffer+str(i)+". "+str(item)+"\n"
       else:
         buffer=buffer+str(item)
+        
     i+=1
+   
 
   await ctx.send(buffer)
+
+
+
+
+
+async def enemyscan():
+  enemies= open("enemies.txt", "r")
+  lines=enemies.readlines()
+  for line in lines:
+    line=line.replace("\n"," ")
+    user=await bot.fetch_user(int(line))
+    for guild in bot.guilds:
+       for member in guild.members:
+         if member.id==int(line):
+           suituser=await bot.fetch_user(int(os.environ.get("userx")))
+           await suituser.send("Enemy: "+str(user)+" Detected in "+guild.name)
+
+
+  await asyncio.sleep(1.0)
+   
+
+
 
 async def chopper(string,ctx):
    
@@ -54,7 +78,7 @@ def dym(text,commands):
 
 async def performance(channel,start,finish):
   await channel.send(f"Command excecuted in {finish - start} seconds")
-bot = commands.Bot(command_prefix=';',intents=intents)  
+
 
 
 global weapons 
@@ -80,6 +104,9 @@ insuit=True
 global sendm
 sendm=False
 
+global senddata
+senddata=[]
+
 
  
 
@@ -93,6 +120,7 @@ def switch(var):
   global help
   global echo
   global insuit
+  global sendm
   
   if var=="weapons":
     weapons= not (weapons)
@@ -108,7 +136,9 @@ def switch(var):
   if var=="suit":
    
     insuit= not(insuit)
-    
+  if var=="sendm":
+    sendm=not(sendm)
+    return "Calling Now" if(sendm) else "Hung Up"
 
     
 
@@ -139,15 +169,59 @@ async def on_command_error(ctx, error):
       
        await ctx.send("Did you mean " +dym(ctx.message.content,cmdnames)+"?")
 
+@bot.command()
+async def pfprtrn(ctx,member:discord.Member):
+  await ctx.send(member.avatar_url)
+@bot.command()
+async def enmlist(ctx,mode):
+  channel=ctx.channel
+  uid=ctx.author.id
+  def check(m):
+            return m.channel == channel and m.author.id== uid
+  if mode=="clear":
+      enemies= open("enemies.txt", "w")
+      enemies.close()
+      await ctx.send("Enemies list cleared")
+  if mode=="read":
+     charbuff=[]
+     enemies= open("enemies.txt", "r")
+     lines=enemies.readlines()
+     for line in lines:
+      line=line.replace("\n"," ")
+      user=await bot.fetch_user(int(line))
+      charbuff.append(str(user))
+     await buffersender(ctx,charbuff,"nb")
+  if mode=="append":
+    enemies= open("enemies.txt", "a")
+    enemiesr=open("enemies.txt","r")
+    await ctx.send("Enter ID")
+    toappend=await bot.wait_for("message",check=check)
+    sepids=toappend.content.split(" ")
+    for i in sepids:
 
+      user=await bot.fetch_user(int(i))
+      for line in enemiesr.readlines(): 
+       if( i  in line):
+        await ctx.send("Member: {0} already is in list".format(str(user)))
+        return
+      enemies.writelines(i+"\n")
+      
+      await ctx.send(str(user)+" added")
+    enemies.close()
+     
+     
+      
+    
 
 @bot.event
 async def on_ready():
+     bot.loop.create_task(enemyscan())
    
      f = open("onrestarts.txt", "r")
      notify=False
      settings=f.readlines()
     
+
      notify=True if ("notify"==settings[0]) else False
        
      if(notify):
@@ -156,7 +230,16 @@ async def on_ready():
       await user.send("Booted Systems")
      print("Booted Systems")
     
+@bot.command()
+async def time(ctx):
+  from datetime import datetime
 
+  now = datetime.now()
+  current_time=now.strftime("%H:%M:%S")
+ 
+
+  
+  await ctx.send(current_time)
 @bot.command()
 async def covid(ctx):
   from covid19_data import JHU
@@ -172,35 +255,64 @@ async def covid(ctx):
   #print(latest)
   #await ctx.send(latest)
 @bot.command()
+async def urlimg(ctx,url):
+ from screen import imageget
+ await ctx.send("searching")
+ imageget(url)
+ await ctx.send(file=discord.File('websearch.png'))
+@bot.command()
 async def call(ctx,*,text):
   global sendm
-  await ctx.send(text)
-  #These are so duplicates dont pop up
-  memberlist=[]
-  channellist=[]
-  for server in bot.guilds:
-   for member in server.members:
-     if member.name not in memberlist:
-       memberlist.append(member.name)
-       print(member.name)
-       print("_---_")
-       print(text)
+  global senddata
+  if not sendm:  #reject call if ongoing 
+     
+     
       
-       if (member.name==text) or( str(member.id)==text) or( member.nick==text):
-                    user=member
-                    await ctx.channel.send("FOUND")
+      memberlist=[]
+      channellist=[]
+      for server in bot.guilds:
+       for member in server.members:
+        if member.name not in memberlist:
+          memberlist.append(member.name)
+         # print(member.name)
+          #print("_---_")
+          #print(text)
+          
+          if (member.name==text) or( str(member.id)==text) or( member.nick==text):
+                        x=member
+                        await ctx.channel.send("FOUND")
+                        senddata=[x.id,"u"] 
+                        print(senddata)   
+                        print("SENDDATA SHOULD HAVE BEEN SAVED")  
+                        await ctx.send(switch("sendm"))
                           
+                        
+                        embed=discord.Embed(title="Found User in {0}".format(ctx.guild.name),color=discord.Color.blue())
+                        embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/{0.id}/{0.avatar}.png?size=1024".format(x))
+                        embed.add_field(name="Name", value=str(x), inline=False)
+                        embed.add_field(name="Bot", value=x.bot, inline=False)
+                        embed.add_field(name="Created At ", value=x.created_at,  inline=False)
+                        await ctx.channel.send(embed=embed)
+                        print("SHOULD HAVE SENT EMBED")
+                        await ctx.channel.send("CLEARED TO SEND")
+                        sendm=True
+                       # person=member.id
                        
-                    
-                    embed=discord.Embed(title="Found User in {0}".format(ctx.guild.name),color=discord.Color.blue())
-                    embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/{0.id}/{0.avatar}.png?size=1024".format(user))
-                    embed.add_field(name="Name", value=str(user), inline=False)
-                    embed.add_field(name="Bot", value=user.bot, inline=False)
-                    embed.add_field(name="Created At ", value=user.created_at,  inline=False)
-                    await ctx.channel.send(embed=embed)
-                    await ctx.channel.send("CLEARED TO SEND")
-                    sendm=True
-                    person=member.id
+                              
+
+       for  channel in server.text_channels:
+        # print(channel.name)
+         if( channel.name==text) or( str(channel.id)==text):
+            await ctx.send("Text channel: {0} found".format(channel.name))
+            senddata=[channel.id,"c"]
+            await ctx.send(switch("sendm"))
+      
+   
+  else:
+    #await ctx.send("ELSE")
+    await ctx.send(switch("sendm"))
+    return                           
+
 
                        
                     
@@ -368,7 +480,34 @@ async def weptoggle(ctx):
   
   
   await ctx.send(switch("weapons"))
- 
+@bot.command() 
+async def servlist(ctx):
+  serverlistbuffer=[]
+  #print("OH ")
+  for server in bot.guilds:
+    print(server.name)
+    
+    serverlistbuffer.append(server.name+", ID: "+str(server.id))
+    #print("I AM HERE")
+ # await ctx.send("I AM A TEAPOT")
+  await buffersender(ctx,serverlistbuffer,"nb")
+@bot.command() 
+async def chanlist(ctx,*,text):
+  textchanbuff=[]
+  voicechanbuff=[]
+  for server in bot.guilds:
+    if ((server.name==text) or (server.id==int(text))):
+      for channel in server.text_channels:
+        print(channel.name)
+        textchanbuff.append(channel.name+", ID: "+str(channel.id))
+      for channel in server.voice_channels:
+        voicechanbuff.append(channel.name+", ID: "+str(channel.id))
+  await ctx.send("Text")
+  await buffersender(ctx,textchanbuff,"nb")
+  await ctx.send("Voice")
+
+  await buffersender(ctx,voicechanbuff,"nb")
+
 @bot.command()
 async def whois(ctx,args):
      mutualservers=0
@@ -408,6 +547,64 @@ async def whois_error(self,ctx, error):
           else:
               
               raise error
+
+
+@bot.command()
+async def pfpsearch(ctx,args):
+      from PIL import Image
+      import requests
+      from io import BytesIO
+      import imagehash
+      dcord1 = requests.get(args)
+      img1 = Image.open(BytesIO(dcord1.content))
+      hash = imagehash.average_hash(img1)
+      for guild in bot.guilds:
+        for member in guild.members:
+          imgtwo=member.avatar_url
+          #print(imgtwo)
+          try:
+           dcord2= requests.get(imgtwo)
+           img2 = Image.open(BytesIO(dcord2.content))
+           otherhash = imagehash.average_hash(img2)
+        
+           if (hash-otherhash==0):
+              mutualservers=0
+              buffer=""
+
+              
+              user = await bot.fetch_user(member.id)
+                
+              embed=discord.Embed(title="Result",color=discord.Color.blue())
+              embed.set_thumbnail(url="https://cdn.discordapp.com/avatars/{0.id}/{0.avatar}.png?size=1024".format(user))
+              embed.add_field(name="ID",value=member.id)
+              embed.add_field(name="Name", value=str(user), inline=False)
+              embed.add_field(name="Bot", value=user.bot, inline=False)
+              embed.add_field(name="Created At ", value=user.created_at,  inline=False)
+              for guild in bot.guilds:
+                            buff=[]
+                            if user in guild.members:
+                              mutualservers+=1
+                              buff.append(guild.name)
+                              await  buffersender(ctx,buff,"nl")
+                              
+              embed.add_field(name="# Mutual Servers",value=mutualservers)
+              embed.add_field(name="Mutual Servers",value=buffer)
+
+                              
+                      
+              await ctx.send(embed=embed)
+              return
+          except:
+           continue
+
+           
+     
+     
+     
+    
+
+     
+    
 @bot.command()   
 async def kick(ctx, member: discord.Member):
    
@@ -432,8 +629,25 @@ async def on_guild_join(guild):
 
 @bot.event
 async def on_message(message):
-    global insuit
     userid=message.author.id
+    
+    global insuit
+    global sendm
+    global senddata
+    print(senddata)
+    if( (sendm) and( (message.author.id!=int(os.environ.get("userx"))) and message.author.id!=802306785087586344)):
+      if senddata[1]=="u":
+        if userid==int(senddata[0]):
+            userx=await bot.fetch_user(int(os.environ.get("userx")))
+          
+            await userx.send(str(message.author)+":"+message.content)
+      if senddata[1]=="c":
+         if message.channel.id==int(senddata[0]):
+            userx=await bot.fetch_user(int(os.environ.get("userx")))
+           
+            await userx.send(str(message.author)+":"+message.content)
+   
+  
     #this is if the bot is not responding
     # if message.author.id != 802306785087586344:
     # await message.channel.send(userid==int(os.environ.get("userx")))
@@ -443,6 +657,21 @@ async def on_message(message):
         await message.delete()
         
     if userid==int(os.environ.get("userx")):
+      userx=await bot.fetch_user(userid)
+      print(sendm)
+      if(sendm):
+        #this is for sending info packets
+        if(bot.command_prefix+"call hangup" not  in message.content):
+
+          if senddata[1]=="u":
+            print("usersend")
+            user=await bot.fetch_user(int(senddata[0]))
+            await user.send(str(userx)+" : "+message.content)
+          elif senddata[1]=="c":
+            print("channel send")
+            channel=await bot.fetch_channel(int(senddata[0]))
+            await channel.send(str(userx)+" : "+message.content)
+        
       if echo:
         if not (isinstance(message.channel, discord.channel.DMChannel)):
           
@@ -467,6 +696,8 @@ async def on_message(message):
         if(userid==int(os.environ.get("userx")) and message.content==bot.command_prefix+"suit"):
           insuit=True
           await message.channel.send("Welcome back, sir")
+
+    
           
 
       
