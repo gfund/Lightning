@@ -4,7 +4,7 @@ from webs import keep_alive
 import discord
 import os
 import covid19_data
-#from jarvis import jarvis
+#from jarvis import jarvisa
 from PyDictionary import PyDictionary
 dictionary=PyDictionary()
 import time
@@ -106,6 +106,8 @@ sendm=False
 
 global senddata
 senddata=[]
+global author
+author=" "
 
 
  
@@ -644,6 +646,7 @@ async def on_message(message):
     global insuit
     global sendm
     global senddata
+    
     print(senddata)
     if( (sendm) and( (message.author.id!=int(os.environ.get("userx"))) and message.author.id!=802306785087586344)):
       if senddata[1]=="u":
