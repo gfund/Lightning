@@ -720,5 +720,5 @@ keep_alive()
 
 TOKEN=os.environ.get("DISCORD_BOT_SECRET")
 
-bot.run(TOKEN)
+bot.run("ODAyMzA2Nzg1MDg3NTg2MzQ0.YAtUaw.7fTGQL-0j35veQ4Vp9x8CSDBE_U")
 
